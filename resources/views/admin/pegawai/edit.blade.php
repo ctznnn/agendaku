@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends('layouts.app')
 
 @section('title', 'Edit Pegawai')
 
@@ -8,7 +8,7 @@
     <div class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                <i class="fas fa-user-edit mr-2 text-yellow-600 dark:text-yellow-400"></i>
+                <i class="fas fa-user-edit mr-2 text-yellow-600"></i>
                 Edit Pegawai
             </h1>
             <p class="text-gray-500 dark:text-gray-400 mt-1">Ubah data pegawai yang terdaftar</p>
@@ -25,13 +25,13 @@
 
     <!-- Alert Messages -->
     @if(session('success'))
-        <div class="bg-green-100 dark:bg-green-900/50 border-l-4 border-green-500 text-green-700 dark:text-green-300 p-4 rounded-lg mb-6">
+        <div class="bg-green-100 dark:bg-green-900/30 border-l-4 border-green-500 text-green-700 dark:text-green-400 p-4 rounded-lg mb-6">
             <i class="fas fa-check-circle mr-2"></i> {{ session('success') }}
         </div>
     @endif
 
     @if ($errors->any())
-        <div class="bg-red-100 dark:bg-red-900/50 border-l-4 border-red-500 text-red-700 dark:text-red-300 p-4 rounded-lg mb-6">
+        <div class="bg-red-100 dark:bg-red-900/30 border-l-4 border-red-500 text-red-700 dark:text-red-400 p-4 rounded-lg mb-6">
             <div class="flex items-center">
                 <i class="fas fa-exclamation-circle mr-2"></i>
                 <strong class="font-bold">Error!</strong>
@@ -65,11 +65,12 @@
                 <!-- Informasi Dasar -->
                 <div>
                     <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                        <i class="fas fa-info-circle mr-2 text-emerald-600 dark:text-emerald-400"></i>
+                        <i class="fas fa-info-circle mr-2 text-emerald-600"></i>
                         Informasi Dasar
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <!-- Nama Lengkap -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Nama Lengkap <span class="text-red-500">*</span>
@@ -77,26 +78,27 @@
                             <input type="text" name="name" value="{{ old('name', $pegawai->name) }}" required
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent dark:bg-gray-700 dark:text-white @error('name') border-red-500 @enderror">
                             @error('name')
-                                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
+                        <!-- ✅ EMAIL - SEKARANG BISA DIUBAH ADMIN -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Email
+                                <i class="fas fa-envelope mr-1 text-yellow-500"></i>
+                                Email <span class="text-red-500">*</span>
                             </label>
-                            <div class="relative">
-                                <input type="email" value="{{ $pegawai->email }}" disabled
-                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">
-                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                                    <i class="fas fa-lock text-gray-400 dark:text-gray-500"></i>
-                                </div>
-                            </div>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                <i class="fas fa-info-circle mr-1"></i> Email tidak dapat diubah.
+                            <input type="email" name="email" value="{{ old('email', $pegawai->email) }}" required
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent dark:bg-gray-700 dark:text-white @error('email') border-red-500 @enderror">
+                            <p class="text-xs text-gray-400 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i> Email akan digunakan untuk login pegawai
                             </p>
+                            @error('email')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
+                        <!-- Unit Kerja -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Unit Kerja
@@ -104,8 +106,12 @@
                             <input type="text" name="unit_kerja" value="{{ old('unit_kerja', $pegawai->unit_kerja) }}"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                                 placeholder="Contoh: Bendahara, Kesra, Umum">
+                            @error('unit_kerja')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
+                        <!-- Status Akun -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Status Akun
@@ -115,21 +121,21 @@
                                 <option value="1" {{ $pegawai->is_active ? 'selected' : '' }}>🟢 Aktif</option>
                                 <option value="0" {{ !$pegawai->is_active ? 'selected' : '' }}>🔴 Nonaktif</option>
                             </select>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Pegawai nonaktif tidak dapat login ke sistem.</p>
+                            <p class="text-xs text-gray-400 mt-1">Pegawai nonaktif tidak dapat login ke sistem.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Reset Password -->
+                <!-- Reset Password (Opsional) -->
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                        <i class="fas fa-key mr-2 text-yellow-600 dark:text-yellow-400"></i>
+                        <i class="fas fa-key mr-2 text-yellow-600"></i>
                         Reset Password (Opsional)
                     </h3>
 
                     <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
                         <div class="flex items-start gap-3">
-                            <i class="fas fa-exclamation-triangle text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mt-0.5"></i>
                             <div class="text-sm text-yellow-700 dark:text-yellow-300">
                                 <p class="font-medium">Perhatian!</p>
                                 <p class="text-xs">Reset password hanya dilakukan jika pegawai lupa password. Isi form di bawah hanya jika ingin mengubah password.</p>
@@ -145,7 +151,7 @@
                             <input type="password" name="new_password"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                                 placeholder="Kosongkan jika tidak ingin mengubah">
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Minimal 8 karakter</p>
+                            <p class="text-xs text-gray-400 mt-1">Minimal 8 karakter</p>
                         </div>
 
                         <div>
@@ -162,7 +168,7 @@
                 <!-- Informasi Tambahan -->
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
                     <h3 class="text-md font-semibold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                        <i class="fas fa-chart-line mr-2 text-gray-500 dark:text-gray-400"></i>
+                        <i class="fas fa-chart-line mr-2 text-gray-500"></i>
                         Informasi Tambahan
                     </h3>
 
