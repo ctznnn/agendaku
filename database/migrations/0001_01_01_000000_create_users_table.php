@@ -1,4 +1,5 @@
 <?php
+// database/migrations/2025_01_01_000000_create_users_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -7,43 +8,31 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Jalankan migration.
+     * Membuat tabel users untuk menyimpan data admin dan pegawai
      */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
-            $table->timestamps();
-        });
-
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
-
-        Schema::create('sessions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->longText('payload');
-            $table->integer('last_activity')->index();
+            $table->id();                           // ID primary key auto increment
+            $table->string('name');                 // Nama lengkap user
+            $table->string('email')->unique();      // Email unique untuk login
+            $table->string('password');             // Password yang sudah di-hash
+            $table->enum('role', ['admin', 'pegawai'])->default('pegawai'); // Role user
+            $table->string('unit_kerja')->nullable(); // Unit kerja (khusus pegawai)
+            $table->boolean('is_active')->default(true); // Status aktif/nonaktif
+            $table->timestamp('last_login_at')->nullable(); // Terakhir login
+            $table->rememberToken();                // Token untuk "ingat saya"
+            $table->timestamps();                   // created_at & updated_at
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Rollback migration.
+     * Hapus tabel users jika sudah ada
      */
     public function down(): void
     {
         Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('sessions');
     }
 };
