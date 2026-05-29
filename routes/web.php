@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/agendas/{agenda}/share', [AdminAgendaController::class, 'share'])->name('agendas.share');
         Route::patch('/agendas-pegawai/{pegawai}/kehadiran', [AdminAgendaController::class, 'updateKehadiran'])->name('agendas.update-kehadiran');
         Route::delete('/agendas-pegawai/{pegawai}/reset-kehadiran', [AdminAgendaController::class, 'resetKehadiran'])->name('agendas.reset-kehadiran');
+        Route::post('/agendas/bulk-share', [AdminAgendaController::class, 'bulkShare'])->name('agendas.bulk-share'); 
 
         // ✅ KELOLA PEGAWAI
         Route::get('/pegawai', [PegawaiController::class, 'index'])->name('pegawai.index');
