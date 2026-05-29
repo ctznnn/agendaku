@@ -11,7 +11,7 @@
             Daftar Agenda
         </h1>
         <div class="flex gap-2">
-            <!-- ✅ TOMBOL SHARE TERPILIH -->
+            <!-- Tombol Share Terpilih -->
             <button type="button" id="bulkShareBtn"
                 class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-sm">
                 <i class="fas fa-share-alt mr-2"></i>
@@ -94,7 +94,7 @@
                 </div>
             </form>
 
-            <!-- ✅ TOMBOL BULK ACTION -->
+            <!-- Tombol Bulk Action -->
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-gray-500 dark:text-gray-400">
@@ -122,14 +122,13 @@
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-800">
                     <tr>
-                        <!-- ✅ CHECKBOX DI HEADER -->
                         <th class="px-4 py-3 text-left">
                             <input type="checkbox" id="selectAllCheckbox" class="rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-emerald-600">
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">No</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Judul</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tanggal</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Waktu</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Jam</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tempat</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Peserta</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
@@ -139,10 +138,9 @@
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($agendas as $agenda)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        <!-- ✅ CHECKBOX DI SETIAP BARIS -->
                         <td class="px-4 py-4 whitespace-nowrap">
                             <input type="checkbox" class="agenda-checkbox rounded border-gray-300 dark:border-gray-600 w-4 h-4 text-emerald-600" value="{{ $agenda->id }}">
-                        </td>
+                        <td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {{ $loop->iteration }}
                         </td>
@@ -153,25 +151,39 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            <div class="flex items-center">
-                                <i class="far fa-calendar mr-2 text-gray-500"></i>
-                                {{ $agenda->tanggal ? \Carbon\Carbon::parse($agenda->tanggal)->format('d/m/Y') : '-' }}
-                            </div>
+                            {{ $agenda->tanggal ? \Carbon\Carbon::parse($agenda->tanggal)->format('d/m/Y') : '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             <div class="flex items-center">
                                 <i class="far fa-clock mr-2 text-gray-500"></i>
-                                {{ date('H:i', strtotime($agenda->waktu_mulai)) }} WIB
+                                @php
+                                    $waktuMulai = $agenda->waktu_mulai;
+                                    if (strpos($waktuMulai, ' ') !== false) {
+                                        $parts = explode(' ', $waktuMulai);
+                                        $waktuMulai = end($parts);
+                                    }
+                                    if (strlen($waktuMulai) > 5) {
+                                        $waktuMulai = date('H:i', strtotime($waktuMulai));
+                                    }
+                                @endphp
+                                <span class="font-mono">{{ $waktuMulai }} WIB</span>
                                 @if($agenda->waktu_selesai)
-                                    - {{ date('H:i', strtotime($agenda->waktu_selesai)) }} WIB
+                                    @php
+                                        $waktuSelesai = $agenda->waktu_selesai;
+                                        if (strpos($waktuSelesai, ' ') !== false) {
+                                            $parts = explode(' ', $waktuSelesai);
+                                            $waktuSelesai = end($parts);
+                                        }
+                                        if (strlen($waktuSelesai) > 5) {
+                                            $waktuSelesai = date('H:i', strtotime($waktuSelesai));
+                                        }
+                                    @endphp
+                                    <span class="text-gray-400 ml-1">- {{ $waktuSelesai }} WIB</span>
                                 @endif
                             </div>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                            <div class="flex items-center">
-                                <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
-                                {{ \Illuminate\Support\Str::limit($agenda->tempat, 30) ?? '-' }}
-                            </div>
+                            {{ \Illuminate\Support\Str::limit($agenda->tempat, 30) ?? '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
@@ -334,9 +346,7 @@ document.querySelectorAll('.btn-share').forEach(btn => {
         btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         btnElement.disabled = true;
 
-        let url = '/admin/agendas/' + id + '/share';
-
-        fetch(url, {
+        fetch('/admin/agendas/' + id + '/share', {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -355,6 +365,9 @@ document.querySelectorAll('.btn-share').forEach(btn => {
             if (data.success) {
                 document.getElementById('shareText').value = data.text;
                 document.getElementById('shareModal').classList.remove('hidden');
+                // Auto share ke WhatsApp
+                let encodedText = encodeURIComponent(data.text);
+                window.open('https://wa.me/?text=' + encodedText, '_blank');
             } else {
                 alert('Gagal: ' + (data.message || 'Unknown error'));
             }
@@ -391,47 +404,30 @@ if (bulkShareBtn) {
         document.getElementById('shareText').value = 'Loading...';
         document.getElementById('shareModal').classList.remove('hidden');
 
-        let promises = selectedIds.map(id => {
-            return fetch('/admin/agendas/' + id + '/share', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({})
-            })
-            .then(res => res.json());
+        fetch('/admin/agendas/bulk-share', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ ids: selectedIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('shareText').value = data.text;
+                let encodedText = encodeURIComponent(data.text);
+                window.open('https://wa.me/?text=' + encodedText, '_blank');
+            } else {
+                alert('Gagal: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            document.getElementById('shareText').value = 'Error: ' + err.message;
+            alert('Gagal mengambil data share: ' + err.message);
         });
-
-        Promise.all(promises)
-            .then(results => {
-                let allText = '';
-                results.forEach((data, index) => {
-                    if (data.success) {
-                        let text = data.text;
-                        if (index === 0) {
-                            allText += text;
-                        } else {
-                            let lines = text.split('\n');
-                            lines.splice(0, 2);
-                            let cleanedText = lines.join('\n');
-                            allText += '\n\n================================\n\n';
-                            allText += cleanedText;
-                        }
-                    }
-                });
-                document.getElementById('shareText').value = allText || 'Gagal membuat undangan';
-                if (allText) {
-                    let encodedText = encodeURIComponent(allText);
-                    window.open('https://wa.me/?text=' + encodedText, '_blank');
-                }
-            })
-            .catch(err => {
-                console.error('Error:', err);
-                document.getElementById('shareText').value = 'Error: ' + err.message;
-                alert('Gagal mengambil data share: ' + err.message);
-            });
     });
 }
 
