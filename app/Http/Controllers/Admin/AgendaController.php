@@ -17,7 +17,6 @@ class AgendaController extends Controller
      */
     private function updateAllStatuses()
     {
-        // Ambil semua agenda
         $agendas = Agenda::all();
         foreach ($agendas as $agenda) {
             $this->updateAgendaStatus($agenda);
@@ -26,12 +25,6 @@ class AgendaController extends Controller
 
     /**
      * Update status single agenda
-     * Logika:
-     * - Tanggal < hari ini = SELESAI
-     * - Tanggal = hari ini:
-     *    - Waktu sekarang >= waktu mulai = BERLANGSUNG
-     *    - Waktu sekarang < waktu mulai = DIRENCANAKAN
-     * - Tanggal > hari ini = DIRENCANAKAN
      */
     private function updateAgendaStatus($agenda)
     {
@@ -39,7 +32,6 @@ class AgendaController extends Controller
             $now = Carbon::now();
             $tanggalAgenda = Carbon::parse($agenda->tanggal);
 
-            // Bersihkan waktu mulai
             $waktuMulaiStr = $this->cleanTimeString($agenda->waktu_mulai);
             if (!$waktuMulaiStr) {
                 return;
@@ -47,39 +39,29 @@ class AgendaController extends Controller
 
             $waktuMulai = Carbon::parse($agenda->tanggal . ' ' . $waktuMulaiStr);
 
-            // Jika status batal, skip
             if ($agenda->status == 'batal') {
                 return;
             }
 
             $newStatus = $agenda->status;
 
-            // Jika tanggal sudah lewat (H-1, H-2, dst) -> SELESAI
             if ($tanggalAgenda->lt($now->startOfDay())) {
                 $newStatus = 'selesai';
-            }
-            // Jika tanggal hari ini (H+0)
-            elseif ($tanggalAgenda->isToday()) {
-                // Jika waktu sekarang sudah melewati atau sama dengan waktu mulai -> BERLANGSUNG
+            } elseif ($tanggalAgenda->isToday()) {
                 if ($now->greaterThanOrEqualTo($waktuMulai)) {
                     $newStatus = 'berlangsung';
                 } else {
                     $newStatus = 'direncanakan';
                 }
-            }
-            // Jika tanggal masih future (H+1, H+2, dst) -> DIRENCANAKAN
-            elseif ($tanggalAgenda->gt($now->startOfDay())) {
+            } elseif ($tanggalAgenda->gt($now->startOfDay())) {
                 $newStatus = 'direncanakan';
             }
 
-            // Update jika berbeda
             if ($agenda->status != $newStatus) {
                 $agenda->update(['status' => $newStatus]);
-                \Log::info('Status agenda "' . $agenda->judul . '" berubah dari ' . $agenda->status . ' menjadi ' . $newStatus);
             }
 
         } catch (\Exception $e) {
-            \Log::error('Error update status: ' . $e->getMessage());
             return;
         }
     }
@@ -95,23 +77,19 @@ class AgendaController extends Controller
 
         $waktu = $time;
 
-        // Jika mengandung spasi, ambil bagian terakhir (jam)
         if (strpos($waktu, ' ') !== false) {
             $parts = explode(' ', $waktu);
             $waktu = end($parts);
         }
 
-        // Jika masih panjang, ambil 8 karakter terakhir
         if (strlen($waktu) > 8) {
             $waktu = substr($waktu, -8);
         }
 
-        // Jika format H:i, tambahkan :00
         if (preg_match('/^\d{2}:\d{2}$/', $waktu)) {
             $waktu = $waktu . ':00';
         }
 
-        // Jika format sudah benar H:i:s
         if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $waktu)) {
             return $waktu;
         }
@@ -120,46 +98,39 @@ class AgendaController extends Controller
     }
 
     /**
-     * INDEX - Daftar agenda (diurutkan dari yang terbaru)
+     * INDEX - Daftar agenda (diurutkan berdasarkan jam mulai)
      */
-        /**
- * INDEX - Daftar agenda
- */
-public function index(Request $request)
-{
-    // Update status semua agenda setiap kali halaman diakses
-    $this->updateAllStatuses();
+    public function index(Request $request)
+    {
+        $this->updateAllStatuses();
 
-    $query = Agenda::with('pegawai');
+        $query = Agenda::with('pegawai');
 
-    // ✅ Filter berdasarkan TANGGAL (satu tanggal)
-    if ($request->filled('tanggal')) {
-        $query->whereDate('tanggal', $request->tanggal);
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal', $request->tanggal);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('judul', 'like', '%' . $search . '%')
+                    ->orWhere('tempat', 'like', '%' . $search . '%')
+                    ->orWhere('penyelenggara', 'like', '%' . $search . '%');
+            });
+        }
+
+        // Urutkan berdasarkan jam mulai dari yang paling kecil
+        $agendas = $query->orderByRaw('CAST(waktu_mulai AS TIME) ASC')
+            ->orderBy('tanggal', 'asc')
+            ->paginate(10);
+
+        return view('admin.agendas.index', compact('agendas'));
     }
 
-    // Filter status
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
-    }
-
-    // ✅ Filter pencarian (bisa cari judul, tempat, penyelenggara)
-    if ($request->filled('search')) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('judul', 'like', '%' . $search . '%')
-                ->orWhere('tempat', 'like', '%' . $search . '%')
-                ->orWhere('penyelenggara', 'like', '%' . $search . '%');
-        });
-    }
-
-    // Urutkan dari yang terbaru dibuat
-    $agendas = $query->orderBy('created_at', 'desc')
-        ->orderBy('tanggal', 'desc')
-        ->orderBy('waktu_mulai', 'asc')
-        ->paginate(10);
-
-    return view('admin.agendas.index', compact('agendas'));
-}
     /**
      * CREATE - Form tambah agenda
      */
@@ -189,11 +160,9 @@ public function index(Request $request)
 
         DB::beginTransaction();
         try {
-            // Format waktu
             $waktuMulai = date('H:i:s', strtotime($request->waktu_mulai));
             $waktuSelesai = $request->waktu_selesai ? date('H:i:s', strtotime($request->waktu_selesai)) : null;
 
-            // Hitung status awal
             $now = Carbon::now();
             $tanggalAgenda = Carbon::parse($request->tanggal);
             $waktuMulaiCarbon = Carbon::parse($request->tanggal . ' ' . $waktuMulai);
@@ -219,7 +188,6 @@ public function index(Request $request)
                 'catatan' => $request->catatan
             ]);
 
-            // Simpan pegawai
             $pegawaiTerpilih = User::whereIn('id', $request->pegawai_ids)->get();
             foreach ($pegawaiTerpilih as $pegawai) {
                 AgendaPegawai::create([
@@ -245,8 +213,6 @@ public function index(Request $request)
     public function show($id)
     {
         $agenda = Agenda::with('pegawai')->findOrFail($id);
-
-        // Update status agenda
         $this->updateAgendaStatus($agenda);
         $agenda->refresh();
 
@@ -259,8 +225,6 @@ public function index(Request $request)
     public function edit($id)
     {
         $agenda = Agenda::with('pegawai')->findOrFail($id);
-
-        // Update status agenda
         $this->updateAgendaStatus($agenda);
         $agenda->refresh();
 
@@ -294,7 +258,6 @@ public function index(Request $request)
             $waktuMulai = date('H:i:s', strtotime($request->waktu_mulai));
             $waktuSelesai = $request->waktu_selesai ? date('H:i:s', strtotime($request->waktu_selesai)) : null;
 
-            // Hitung status baru
             $now = Carbon::now();
             $tanggalAgenda = Carbon::parse($request->tanggal);
             $waktuMulaiCarbon = Carbon::parse($request->tanggal . ' ' . $waktuMulai);
@@ -320,10 +283,8 @@ public function index(Request $request)
                 'catatan' => $request->catatan
             ]);
 
-            // Hapus pegawai lama
             $agenda->pegawai()->delete();
 
-            // Simpan pegawai baru
             $pegawaiTerpilih = User::whereIn('id', $request->pegawai_ids)->get();
             foreach ($pegawaiTerpilih as $pegawai) {
                 AgendaPegawai::create([
@@ -361,7 +322,7 @@ public function index(Request $request)
     }
 
     /**
-     * SHARE - Share undangan
+     * SHARE - Share undangan single agenda
      */
     public function share($id)
     {
@@ -380,29 +341,32 @@ public function index(Request $request)
                                 $bulan[date('n', strtotime($agenda->tanggal))] . ' ' .
                                 date('Y', strtotime($agenda->tanggal));
 
-            $waktuMulai = date('H.i', strtotime($agenda->waktu_mulai));
-            $waktuSelesai = $agenda->waktu_selesai ? date('H.i', strtotime($agenda->waktu_selesai)) : 'Selesai';
+            $waktuMulai = $this->formatWaktu($agenda->waktu_mulai);
+            $waktuMulaiDisplay = date('H.i', strtotime($waktuMulai));
+
+            $waktuSelesai = $agenda->waktu_selesai ? $this->formatWaktu($agenda->waktu_selesai) : null;
+            $waktuSelesaiDisplay = $waktuSelesai ? date('H.i', strtotime($waktuSelesai)) : null;
 
             $teks = "*AGENDA LURAH & PAMONG KALURAHAN TRIRENGGO*\n";
 
-            // Surat dari di awal
             if ($agenda->penyelenggara) {
                 $teks .= "Surat dari : *" . $agenda->penyelenggara . "*\n";
             }
 
             $teks .= $tanggalFormatted . "\n\n";
 
-            if ($waktuSelesai == 'Selesai') {
-                $teks .= "Pukul : *" . $waktuMulai . " WIB*\n";
+            if ($waktuSelesaiDisplay) {
+                $teks .= "Pukul : *" . $waktuMulaiDisplay . " WIB - " . $waktuSelesaiDisplay . " WIB*\n";
             } else {
-                $teks .= "Pukul : *" . $waktuMulai . " WIB - " . $waktuSelesai . " WIB*\n";
+                $teks .= "Pukul : *" . $waktuMulaiDisplay . " WIB*\n";
             }
 
             $teks .= "Agenda : *" . $agenda->judul . "*\n";
             $teks .= "di : " . $agenda->tempat . "\n\n";
 
             $teks .= "Hadir : \n";
-            foreach ($agenda->pegawai as $pegawai) {
+            $pegawaiSorted = $agenda->pegawai->sortBy('nama_pegawai');
+            foreach ($pegawaiSorted as $pegawai) {
                 $teks .= "- " . $pegawai->nama_pegawai;
                 if ($pegawai->unit_kerja) {
                     $teks .= " (" . $pegawai->unit_kerja . ")";
@@ -423,6 +387,104 @@ public function index(Request $request)
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * BULK SHARE - Share multiple agenda (urut berdasarkan jam terkecil)
+     */
+    public function bulkShare(Request $request)
+    {
+        try {
+            $ids = $request->ids;
+            $agendas = Agenda::with('pegawai')
+                ->whereIn('id', $ids)
+                ->orderByRaw('CAST(waktu_mulai AS TIME) ASC')
+                ->get();
+
+            $allText = '';
+            $index = 0;
+
+            $hari = ['Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
+                     'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat',
+                     'Saturday' => 'Sabtu'];
+
+            $bulan = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+            foreach ($agendas as $agenda) {
+                $tanggalFormatted = $hari[date('l', strtotime($agenda->tanggal))] . ', ' .
+                                    date('j', strtotime($agenda->tanggal)) . ' ' .
+                                    $bulan[date('n', strtotime($agenda->tanggal))] . ' ' .
+                                    date('Y', strtotime($agenda->tanggal));
+
+                $waktuMulai = $this->formatWaktu($agenda->waktu_mulai);
+                $waktuMulaiDisplay = date('H.i', strtotime($waktuMulai));
+
+                $waktuSelesai = $agenda->waktu_selesai ? $this->formatWaktu($agenda->waktu_selesai) : null;
+                $waktuSelesaiDisplay = $waktuSelesai ? date('H.i', strtotime($waktuSelesai)) : null;
+
+                $teks = "*AGENDA LURAH & PAMONG KALURAHAN TRIRENGGO*\n";
+
+                if ($agenda->penyelenggara) {
+                    $teks .= "Surat dari : *" . $agenda->penyelenggara . "*\n";
+                }
+
+                $teks .= $tanggalFormatted . "\n\n";
+
+                if ($waktuSelesaiDisplay) {
+                    $teks .= "Pukul : *" . $waktuMulaiDisplay . " WIB - " . $waktuSelesaiDisplay . " WIB*\n";
+                } else {
+                    $teks .= "Pukul : *" . $waktuMulaiDisplay . " WIB*\n";
+                }
+
+                $teks .= "Agenda : *" . $agenda->judul . "*\n";
+                $teks .= "di : " . $agenda->tempat . "\n\n";
+
+                $teks .= "Hadir : \n";
+                $pegawaiSorted = $agenda->pegawai->sortBy('nama_pegawai');
+                foreach ($pegawaiSorted as $pegawai) {
+                    $teks .= "- " . $pegawai->nama_pegawai;
+                    if ($pegawai->unit_kerja) {
+                        $teks .= " (" . $pegawai->unit_kerja . ")";
+                    }
+                    $teks .= "\n";
+                }
+
+                $teks = rtrim($teks);
+
+                if ($index > 0) {
+                    $allText .= "\n\n================================\n\n";
+                }
+                $allText .= $teks;
+                $index++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'text' => $allText
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Format waktu helper
+     */
+    private function formatWaktu($waktu)
+    {
+        if (strpos($waktu, ' ') !== false) {
+            $parts = explode(' ', $waktu);
+            $waktu = end($parts);
+        }
+        if (strlen($waktu) > 8) {
+            $waktu = substr($waktu, -8);
+        }
+        return $waktu;
     }
 
     /**
