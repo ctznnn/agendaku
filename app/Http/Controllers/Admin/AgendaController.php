@@ -361,7 +361,7 @@ class AgendaController extends Controller
                 $teks .= "Pukul : *" . $waktuMulaiDisplay . " WIB*\n";
             }
 
-            $teks .= "Agenda : *" . $agenda->judul . "*\n";
+            $teks .= "Acara : *" . $agenda->judul . "*\n";
             $teks .= "di : " . $agenda->tempat . "\n\n";
 
             $teks .= "Hadir : \n";
@@ -474,7 +474,7 @@ class AgendaController extends Controller
                 }
 
                 // Agenda
-                $allText .= "Agenda : *" . $agenda->judul . "*\n";
+                $allText .= "Acara : *" . $agenda->judul . "*\n";
                 $allText .= "di : " . $agenda->tempat . "\n";
 
                 // Format waktu
