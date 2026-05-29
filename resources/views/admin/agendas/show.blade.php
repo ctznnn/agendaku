@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Detail Agenda')
 
@@ -82,9 +82,29 @@
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Waktu</p>
                         <p class="font-medium text-gray-800 dark:text-white">
-                            {{ date('H:i', strtotime($agenda->waktu_mulai)) }} WIB
+                            @php
+                                $waktuMulai = $agenda->waktu_mulai;
+                                if (strpos($waktuMulai, ' ') !== false) {
+                                    $parts = explode(' ', $waktuMulai);
+                                    $waktuMulai = end($parts);
+                                }
+                                if (strlen($waktuMulai) > 8) {
+                                    $waktuMulai = date('H:i', strtotime($waktuMulai));
+                                }
+                            @endphp
+                            {{ $waktuMulai }} WIB
                             @if($agenda->waktu_selesai)
-                                - {{ date('H:i', strtotime($agenda->waktu_selesai)) }} WIB
+                                @php
+                                    $waktuSelesai = $agenda->waktu_selesai;
+                                    if (strpos($waktuSelesai, ' ') !== false) {
+                                        $parts = explode(' ', $waktuSelesai);
+                                        $waktuSelesai = end($parts);
+                                    }
+                                    if (strlen($waktuSelesai) > 8) {
+                                        $waktuSelesai = date('H:i', strtotime($waktuSelesai));
+                                    }
+                                @endphp
+                                - {{ $waktuSelesai }} WIB
                             @endif
                         </p>
                     </div>
@@ -240,19 +260,31 @@ document.querySelectorAll('.btn-share').forEach(btn => {
         btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         btnElement.disabled = true;
 
-        fetch('/agendas/' + id + '/share', {
+        // ✅ URL untuk Admin
+        let url = '/admin/agendas/' + id + '/share';
+
+        fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({})
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 document.getElementById('shareText').value = data.text;
                 document.getElementById('shareModal').classList.remove('hidden');
+                // Auto share ke WhatsApp
+                let encodedText = encodeURIComponent(data.text);
+                window.open('https://wa.me/?text=' + encodedText, '_blank');
             } else {
                 alert('Gagal: ' + (data.message || 'Unknown error'));
             }
@@ -272,7 +304,7 @@ function copyShareText() {
     let textarea = document.getElementById('shareText');
     textarea.select();
     document.execCommand('copy');
-    alert('Teks berhasil disalin!');
+    alert('✅ Teks berhasil disalin!');
 }
 
 function shareViaWhatsApp() {
