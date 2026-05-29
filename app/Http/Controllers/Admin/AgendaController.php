@@ -405,125 +405,135 @@ class AgendaController extends Controller
  * Jika tanggal sama, header hanya sekali
  * Urutan: Agenda dulu, baru Pukul
  */
-    public function bulkShare(Request $request)
-    {
-        try {
-            $ids = $request->ids;
+   /**
+ * BULK SHARE - Share multiple agenda (urut berdasarkan jam terkecil)
+ * Format: Header -> Surat dari -> Agenda -> di -> Pukul -> Hadir
+ */
+public function bulkShare(Request $request)
+{
+    try {
+        $ids = $request->ids;
 
-            if (empty($ids)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak ada agenda yang dipilih'
-                ], 400);
-            }
-
-            // Urutkan berdasarkan tanggal dan jam mulai
-            $agendas = Agenda::with('pegawai')
-                ->whereIn('id', $ids)
-                ->orderBy('tanggal', 'asc')
-                ->orderByRaw('CAST(waktu_mulai AS TIME) ASC')
-                ->get();
-
-            $allText = '';
-            $lastTanggal = null;
-            $index = 0;
-
-            $hari = ['Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
-                    'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat',
-                    'Saturday' => 'Sabtu'];
-
-            $bulan = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-
-            foreach ($agendas as $agenda) {
-                $currentTanggal = $agenda->tanggal;
-
-                // Tambah separator antar agenda (kecuali agenda pertama)
-                if ($index > 0) {
-                    $allText .= "\n===========================\n\n";
-                }
-
-                // Header HANYA jika tanggal BERBEDA
-                if ($lastTanggal != $currentTanggal) {
-                    $tanggalFormatted = $hari[date('l', strtotime($agenda->tanggal))] . ', ' .
-                                        date('j', strtotime($agenda->tanggal)) . ' ' .
-                                        $bulan[date('n', strtotime($agenda->tanggal))] . ' ' .
-                                        date('Y', strtotime($agenda->tanggal));
-
-                    $allText .= "*AGENDA LURAH & PAMONG KALURAHAN TRIRENGGO*\n";
-
-                    if ($agenda->penyelenggara) {
-                        $allText .= "Surat dari : *" . $agenda->penyelenggara . "*\n";
-                    }
-
-                    $allText .= $tanggalFormatted . "\n\n";
-
-                    $lastTanggal = $currentTanggal;
-                }
-
-                // Format waktu
-                $waktuMulai = $agenda->waktu_mulai;
-                if (strpos($waktuMulai, ' ') !== false) {
-                    $parts = explode(' ', $waktuMulai);
-                    $waktuMulai = end($parts);
-                }
-                if (strlen($waktuMulai) > 8) {
-                    $waktuMulai = substr($waktuMulai, -8);
-                }
-                $waktuMulaiDisplay = date('H.i', strtotime($waktuMulai));
-
-                $waktuSelesai = $agenda->waktu_selesai;
-                if ($waktuSelesai) {
-                    if (strpos($waktuSelesai, ' ') !== false) {
-                        $parts = explode(' ', $waktuSelesai);
-                        $waktuSelesai = end($parts);
-                    }
-                    if (strlen($waktuSelesai) > 8) {
-                        $waktuSelesai = substr($waktuSelesai, -8);
-                    }
-                    $waktuSelesaiDisplay = date('H.i', strtotime($waktuSelesai));
-                } else {
-                    $waktuSelesaiDisplay = null;
-                }
-
-                // ✅ URUTAN: AGENDA DULU, BARU PUKUL
-                $allText .= "Agenda : *" . $agenda->judul . "*\n";
-                $allText .= "di : " . $agenda->tempat . "\n";
-
-                if ($waktuSelesaiDisplay) {
-                    $allText .= "Pukul : *" . $waktuMulaiDisplay . " WIB - " . $waktuSelesaiDisplay . " WIB*\n";
-                } else {
-                    $allText .= "Pukul : *" . $waktuMulaiDisplay . " WIB*\n";
-                }
-
-                $allText .= "\nHadir : \n";
-
-                $pegawaiSorted = $agenda->pegawai->sortBy('nama_pegawai');
-                foreach ($pegawaiSorted as $pegawai) {
-                    $allText .= "- " . $pegawai->nama_pegawai;
-                    if ($pegawai->unit_kerja) {
-                        $allText .= " (" . $pegawai->unit_kerja . ")";
-                    }
-                    $allText .= "\n";
-                }
-
-                $index++;
-            }
-
-            $allText = rtrim($allText);
-
-            return response()->json([
-                'success' => true,
-                'text' => $allText
-            ]);
-
-        } catch (\Exception $e) {
+        if (empty($ids)) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
+                'message' => 'Tidak ada agenda yang dipilih'
+            ], 400);
         }
+
+        // Urutkan berdasarkan tanggal dan jam mulai
+        $agendas = Agenda::with('pegawai')
+            ->whereIn('id', $ids)
+            ->orderBy('tanggal', 'asc')
+            ->orderByRaw('CAST(waktu_mulai AS TIME) ASC')
+            ->get();
+
+        $allText = '';
+        $lastTanggal = null;
+        $index = 0;
+
+        $hari = ['Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa',
+                 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat',
+                 'Saturday' => 'Sabtu'];
+
+        $bulan = [1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+        foreach ($agendas as $agenda) {
+            $currentTanggal = $agenda->tanggal;
+
+            // Tambah separator antar agenda (kecuali agenda pertama)
+            if ($index > 0) {
+                $allText .= "\n===========================\n\n";
+            }
+
+            // Header HANYA jika tanggal BERBEDA
+            if ($lastTanggal != $currentTanggal) {
+                $tanggalFormatted = $hari[date('l', strtotime($agenda->tanggal))] . ', ' .
+                                    date('j', strtotime($agenda->tanggal)) . ' ' .
+                                    $bulan[date('n', strtotime($agenda->tanggal))] . ' ' .
+                                    date('Y', strtotime($agenda->tanggal));
+
+                $allText .= "*AGENDA LURAH & PAMONG KALURAHAN TRIRENGGO*\n";
+                $allText .= $tanggalFormatted . "\n\n";
+
+                $lastTanggal = $currentTanggal;
+            } else {
+                // Jika tanggal sama, tidak perlu header, langsung lanjut
+            }
+
+            // Format waktu
+            $waktuMulai = $agenda->waktu_mulai;
+            if (strpos($waktuMulai, ' ') !== false) {
+                $parts = explode(' ', $waktuMulai);
+                $waktuMulai = end($parts);
+            }
+            if (strlen($waktuMulai) > 8) {
+                $waktuMulai = substr($waktuMulai, -8);
+            }
+            $waktuMulaiDisplay = date('H.i', strtotime($waktuMulai));
+
+            $waktuSelesai = $agenda->waktu_selesai;
+            if ($waktuSelesai) {
+                if (strpos($waktuSelesai, ' ') !== false) {
+                    $parts = explode(' ', $waktuSelesai);
+                    $waktuSelesai = end($parts);
+                }
+                if (strlen($waktuSelesai) > 8) {
+                    $waktuSelesai = substr($waktuSelesai, -8);
+                }
+                $waktuSelesaiDisplay = date('H.i', strtotime($waktuSelesai));
+            } else {
+                $waktuSelesaiDisplay = null;
+            }
+
+            // ✅ Format sesuai permintaan
+            // Surat dari
+            if ($agenda->penyelenggara) {
+                $allText .= "Surat dari : *" . $agenda->penyelenggara . "*\n";
+            } else {
+                $allText .= "Surat dari : *-*\n";
+            }
+
+            // Agenda
+            $allText .= "Acara : *" . $agenda->judul . "*\n";
+            $allText .= "di : " . $agenda->tempat . "\n";
+
+            // Pukul
+            if ($waktuSelesaiDisplay) {
+                $allText .= "Pukul : *" . $waktuMulaiDisplay . " WIB - " . $waktuSelesaiDisplay . " WIB*\n";
+            } else {
+                $allText .= "Pukul : *" . $waktuMulaiDisplay . " WIB*\n";
+            }
+
+            $allText .= "\nHadir : \n";
+
+            $pegawaiSorted = $agenda->pegawai->sortBy('nama_pegawai');
+            foreach ($pegawaiSorted as $pegawai) {
+                $allText .= "- " . $pegawai->nama_pegawai;
+                if ($pegawai->unit_kerja) {
+                    $allText .= " (" . $pegawai->unit_kerja . ")";
+                }
+                $allText .= "\n";
+            }
+
+            $index++;
+        }
+
+        $allText = rtrim($allText);
+
+        return response()->json([
+            'success' => true,
+            'text' => $allText
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
     /**
      * Format waktu helper
      */
