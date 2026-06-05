@@ -130,6 +130,12 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Align Nginx user to run as www-data to match PHP-FPM and avoid permission conflicts
 RUN sed -i 's/user nginx;/user www-data;/g' /etc/nginx/nginx.conf || true
 
+# Configure PHP-FPM to pass worker stderr to the container log stream for debugging
+RUN if [ -f /usr/local/etc/php-fpm.d/www.conf ]; then \
+        sed -i 's/;catch_workers_output = yes/catch_workers_output = yes/g' /usr/local/etc/php-fpm.d/www.conf; \
+        sed -i 's/;decorate_workers_output = no/decorate_workers_output = no/g' /usr/local/etc/php-fpm.d/www.conf; \
+    fi
+
 # Copy application files from Composer builder stage
 COPY --chown=www-data:www-data --from=php-builder /app /var/www/html
 
