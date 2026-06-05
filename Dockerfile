@@ -118,10 +118,17 @@ RUN { \
     echo 'max_input_vars=3000'; \
     echo 'expose_php=off'; \
 } > /usr/local/etc/php/conf.d/production-tuning.ini
+# Set default environment variables for production container
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    LOG_CHANNEL=stderr
 
 # Copy Nginx and Supervisord configuration templates
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Align Nginx user to run as www-data to match PHP-FPM and avoid permission conflicts
+RUN sed -i 's/user nginx;/user www-data;/g' /etc/nginx/nginx.conf || true
 
 # Copy application files from Composer builder stage
 COPY --chown=www-data:www-data --from=php-builder /app /var/www/html
