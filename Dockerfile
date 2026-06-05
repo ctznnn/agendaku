@@ -65,7 +65,7 @@ RUN if [ -f package.json ]; then \
 # ------------------------------------------------------------------------------
 # Stage 3: Production Runtime (PHP-FPM, Nginx, and Supervisord)
 # ------------------------------------------------------------------------------
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 # Set build metadata
 LABEL maintainer="Enterprise Production Devops"
