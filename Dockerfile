@@ -97,7 +97,9 @@ RUN chmod +x /usr/local/bin/install-php-extensions && \
     gd \
     zip \
     opcache \
-    redis || true
+    mbstring \
+    intl && \
+    (install-php-extensions redis || true)
 
 # Configure optimized PHP settings for production
 RUN { \
