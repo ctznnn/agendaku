@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Build PHP/Composer Dependencies
 # ------------------------------------------------------------------------------
-FROM composer:2.7 AS php-builder
+FROM composer:2-php84 AS php-builder
 WORKDIR /app
 
 # Copy dependency definitions
@@ -34,8 +34,8 @@ RUN composer install \
 COPY . .
 
 # Generate optimized, authoritative autoloader for production (fallback to standard autoloader if it fails)
-RUN composer dump-autoload --optimize --no-dev --classmap-authoritative || \
-    composer dump-autoload --optimize --no-dev || \
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative --ignore-platform-reqs || \
+    composer dump-autoload --optimize --no-dev --ignore-platform-reqs || \
     true
 
 # ------------------------------------------------------------------------------
