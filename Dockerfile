@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Build PHP/Composer Dependencies
 # ------------------------------------------------------------------------------
-FROM composer:2-php84 AS php-builder
+FROM composer:2 AS php-builder
 WORKDIR /app
 
 # Copy dependency definitions
